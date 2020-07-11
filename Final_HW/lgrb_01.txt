@@ -1,0 +1,51 @@
+#!/bin/bash
+
+eventfits=$(echo $(ls *5001423001*))
+
+#检查数据：
+dmlist $eventfits blocks
+
+#画图：
+#pset dmcopy clobber=yes
+#dmcopy "$eventfits[events][bin x=0:4095:2,y=0:4095:2]" img_tmp.fits
+#ds9 img_tmp.fits
+
+#源区域和背景区域？
+dmcopy "$eventfits[x=1522:1602,y=635:715]" source.fits clobber=yes
+dmcopy "$eventfits[x=3000:3080,y=3000:3080]" back.fits clobber=yes
+
+#提取光变曲线：
+punlearn dmextract
+pset dmextract "$eventfits[bin time=::50]"
+pset dmextract outfile=36_lc.fits
+pset dmextract clobber=yes
+pset dmextract opt=ltc1
+pset dmextract mode=h
+pset dmextract verbose=5
+dmextract
+
+punlearn dmextract
+pset dmextract "source.fits[bin time=::50]"
+pset dmextract outfile=source_lc.fits
+pset dmextract clobber=yes
+pset dmextract opt=ltc1
+pset dmextract mode=h
+pset dmextract verbose=5
+dmextract
+
+punlearn dmextract
+pset dmextract "back.fits[bin time=::50]"
+pset dmextract outfile=back_lc.fits
+pset dmextract clobber=yes
+pset dmextract opt=ltc1
+pset dmextract mode=h
+pset dmextract verbose=5
+dmextract
+
+#提取能谱
+punlearn dmextract
+dmextract "source.fits[events][bin pi]" cl_source.pha clobber=yes
+dmextract "back.fits[events][bin pi]" cl_bck.pha clobber=yes
+
+pset grppha clobber=y
+grppha infile=cl_source.pha outfile=cl_grp.pha chatter=0 comm=' group min 1 & chkey RESPFILE EPWXT_12umCMOS_rmf_EnRe.fits & chkey ANCRFILE EPWXT_12umCMOS_arf_Focus_3Sigma.fits & chkey BACKFILE cl_bck.pha & exit'
